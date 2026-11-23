@@ -1,5 +1,7 @@
 # Urna Eletrônica — ATPS Tópicos Avançados em ADS e SI
 
+**Aluna:** Maria Eduarda Costa da Silva
+
 Simulação de urna eletrônica em Python com banco SQLite: cadastro de candidatos e eleitores,
 votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio de voto duplo) e apuração com a regra
 da maioria absoluta.
@@ -11,7 +13,7 @@ da maioria absoluta.
 ## Como executar
 
 ```bash
-cd seu_nome_completo
+cd maria_eduarda_costa_da_silva
 python urna.py
 ```
 
@@ -28,9 +30,9 @@ O arquivo `urna.db` é criado automaticamente ao lado do `urna.py` a partir do `
 ## Estrutura
 
 ```
-seu_nome_completo/
+maria_eduarda_costa_da_silva/
   urna.py        # programa principal
   banco.sql      # script de criação das tabelas
-  LINK_DO_VIDEO_SEU_NOME_COMPLETO.txt
+  LINK_DO_VIDEO_MARIA_EDUARDA_COSTA_DA_SILVA.txt
 roteiro_video.md # roteiro do vídeo de apresentação
 ```

@@ -1,7 +1,7 @@
 # Roteiro do vídeo (máx. 3 min)
 
 **0:00–0:15 — Apresentação**
-"Olá, meu nome é ___, matrícula ___, curso de Análise e Desenvolvimento de Sistemas."
+"Olá, meu nome é Maria Eduarda Costa da Silva, matrícula ___, curso de Análise e Desenvolvimento de Sistemas."
 
 **0:15–2:00 — Código (mostrar no PyCharm)**
 1. `banco.sql`: 3 tabelas — candidatos, eleitores (com o campo `ja_votou`) e votos. O voto não guarda o título do eleitor, para manter o voto secreto.
