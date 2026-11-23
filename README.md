@@ -3,41 +3,54 @@
 **Aluna:** Maria Eduarda Costa da Silva — **Matrícula:** 202411007
 
 Simulação de urna eletrônica em Python com banco SQLite: CRUD de candidatos e eleitores
-(cadastrar, alterar, excluir e listar), votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio de voto duplo) e apuração com a regra
-da maioria absoluta.
+(cadastrar, alterar, excluir e listar), votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio
+de voto duplo) e apuração com a regra da maioria absoluta.
+
+Tem duas formas de usar, as duas com o mesmo banco de dados:
+
+- **Versão web** (`app.py`): o Python (Flask) cuida do banco e das regras, e a tela abre no navegador.
+- **Versão em modo texto** (`urna.py`): roda direto no terminal, sem instalar nada.
 
 ## Requisitos
 
-- Python 3.8+ (só usa a biblioteca padrão — não precisa instalar nada com pip)
+- Python 3.8+
+- Flask (só para a versão web): `pip install -r requirements.txt`
 
 ## Como executar
 
 ```bash
 cd maria_eduarda_costa_da_silva
-python urna_gui.py   # interface gráfica (Tkinter)
-python urna.py       # versão em modo texto
-```
 
-As duas versões usam o mesmo banco, então dá para cadastrar numa e votar na outra.
+# versão web — abre sozinha no navegador em http://127.0.0.1:5000
+pip install -r requirements.txt
+python app.py
+
+# versão em modo texto
+python urna.py
+```
 
 O arquivo `urna.db` é criado automaticamente ao lado do `urna.py` a partir do `banco.sql`.
 
-## Roteiro rápido de teste
+## Roteiro rápido de teste (versão web)
 
-1. Opção **6** — carrega 3 candidatos (10, 25, 40) e 12 eleitores (títulos 1001 a 1012)
-2. Opção **3** — lista candidatos e eleitores
-3. Opções **1** (Candidatos) e **2** (Eleitores) — submenus para cadastrar, alterar, excluir e listar
-4. Opção **4** — votação (mínimo de 10 votos; `B` = branco, número inexistente = nulo)
-5. Opção **5** — apuração
-6. Opção **7** — zera a urna para testar de novo
+1. Aba **Apuração** → *Carregar dados de exemplo*: 3 candidatos (10, 25, 40) e 12 eleitores (títulos 1001 a 1012)
+2. Abas **Candidatos** e **Eleitores**: cadastrar, clicar numa linha para alterar ou excluir
+3. Aba **Votação**: digitar o título, *Liberar urna*, votar no teclado da urna (mínimo de 10 votos)
+4. Aba **Apuração**: gráfico e resultado; *Zerar urna* para testar de novo
 
 ## Estrutura
 
 ```
 maria_eduarda_costa_da_silva/
-  urna_gui.py    # interface gráfica (urna, candidatos, eleitores, apuração)
-  urna.py        # versão em modo texto + funções de banco usadas pelas duas
-  banco.sql      # script de criação das tabelas
+  app.py             # servidor web (Flask) com as rotas da API
+  urna.py            # versão em modo texto + funções de banco usadas pelas duas versões
+  banco.sql          # script de criação das tabelas
+  templates/
+    index.html       # página da urna
+  static/
+    style.css        # aparência
+    app.js           # comportamento das telas
+  requirements.txt
   LINK_DO_VIDEO_MARIA_EDUARDA_COSTA_DA_SILVA.txt
-roteiro_video.md # roteiro do vídeo de apresentação
+roteiro_video.md     # roteiro do vídeo de apresentação
 ```
