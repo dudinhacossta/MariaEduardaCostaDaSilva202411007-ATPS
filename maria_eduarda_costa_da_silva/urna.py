@@ -78,17 +78,114 @@ def cadastrar_eleitor(conexao):
         print("Esse titulo ja esta cadastrado.")
 
 
-def listar(conexao):
+# ---------------------------------------------------------------- alterar / excluir
+def buscar_candidato(conexao):
+    """Pede o numero e devolve (numero, nome, partido) ou None."""
+    numero = input("Numero do candidato: ").strip()
+    if not numero.isdigit():
+        print("Numero invalido.")
+        return None
+    candidato = conexao.execute("SELECT numero, nome, partido FROM candidatos WHERE numero = ?",
+                                (int(numero),)).fetchone()
+    if candidato is None:
+        print("Candidato nao encontrado.")
+    return candidato
+
+
+def alterar_candidato(conexao):
+    titulo("ALTERAR CANDIDATO")
+    candidato = buscar_candidato(conexao)
+    if candidato is None:
+        return
+    numero, nome_atual, partido_atual = candidato
+    print("(deixe em branco e tecle ENTER para manter o valor atual)")
+    nome = input(f"Nome [{nome_atual}]: ").strip() or nome_atual
+    partido = input(f"Partido [{partido_atual}]: ").strip().upper() or partido_atual
+    with conexao:
+        conexao.execute("UPDATE candidatos SET nome = ?, partido = ? WHERE numero = ?",
+                        (nome, partido, numero))
+    print(f"Candidato {numero:02d} atualizado: {nome} ({partido}).")
+
+
+def excluir_candidato(conexao):
+    titulo("EXCLUIR CANDIDATO")
+    candidato = buscar_candidato(conexao)
+    if candidato is None:
+        return
+    numero, nome, partido = candidato
+    if input(f"Excluir {nome} ({partido})? (S/N): ").strip().upper() != "S":
+        print("Exclusao cancelada.")
+        return
+    try:
+        with conexao:
+            conexao.execute("DELETE FROM candidatos WHERE numero = ?", (numero,))
+        print(f"Candidato {nome} excluido.")
+    except sqlite3.IntegrityError:
+        # A chave estrangeira em votos impede apagar quem ja recebeu votos.
+        print("Esse candidato ja recebeu votos e nao pode ser excluido.")
+        print("Para exclui-lo, zere a urna primeiro (opcao 7 do menu principal).")
+
+
+def buscar_eleitor(conexao):
+    """Pede o titulo e devolve (titulo, nome, ja_votou) ou None."""
+    titulo_eleitor = input("Numero do titulo de eleitor: ").strip()
+    eleitor = conexao.execute("SELECT titulo, nome, ja_votou FROM eleitores WHERE titulo = ?",
+                              (titulo_eleitor,)).fetchone()
+    if eleitor is None:
+        print("Eleitor nao encontrado.")
+    return eleitor
+
+
+def alterar_eleitor(conexao):
+    titulo("ALTERAR ELEITOR")
+    eleitor = buscar_eleitor(conexao)
+    if eleitor is None:
+        return
+    titulo_eleitor, nome_atual, _ = eleitor
+    print("(deixe em branco e tecle ENTER para manter o valor atual)")
+    nome = input(f"Nome [{nome_atual}]: ").strip() or nome_atual
+    with conexao:
+        conexao.execute("UPDATE eleitores SET nome = ? WHERE titulo = ?", (nome, titulo_eleitor))
+    print(f"Eleitor {titulo_eleitor} atualizado: {nome}.")
+
+
+def excluir_eleitor(conexao):
+    titulo("EXCLUIR ELEITOR")
+    eleitor = buscar_eleitor(conexao)
+    if eleitor is None:
+        return
+    titulo_eleitor, nome, ja_votou = eleitor
+    if ja_votou:
+        # Se apagasse, o mesmo titulo poderia ser cadastrado de novo e votar duas vezes.
+        print(f"{nome} ja votou e nao pode ser excluido (garante a integridade da eleicao).")
+        return
+    if input(f"Excluir o eleitor {nome}? (S/N): ").strip().upper() != "S":
+        print("Exclusao cancelada.")
+        return
+    with conexao:
+        conexao.execute("DELETE FROM eleitores WHERE titulo = ?", (titulo_eleitor,))
+    print(f"Eleitor {nome} excluido.")
+
+
+# ---------------------------------------------------------------- listagens
+def listar_candidatos(conexao):
     titulo("CANDIDATOS")
     for numero, nome, partido in conexao.execute(
             "SELECT numero, nome, partido FROM candidatos ORDER BY numero"):
         print(f"  {numero:02d} - {nome} ({partido})")
 
+
+def listar_eleitores(conexao):
     titulo("ELEITORES")
     for tit, nome, votou in conexao.execute(
             "SELECT titulo, nome, ja_votou FROM eleitores ORDER BY nome"):
         situacao = "JA VOTOU" if votou else "apto"
         print(f"  {tit:<8} {nome:<25} {situacao}")
+
+
+def listar(conexao):
+    listar_candidatos(conexao)
+    listar_eleitores(conexao)
 
 
 def carregar_exemplo(conexao):
@@ -223,11 +320,47 @@ def zerar(conexao):
 
 
 # ---------------------------------------------------------------- menu
+def submenu(conexao, nome, opcoes):
+    """Menu de CRUD (cadastrar, alterar, excluir, listar) de candidatos ou eleitores."""
+    while True:
+        limpar_tela()
+        titulo(nome)
+        for chave, (texto, _) in opcoes.items():
+            print(f"  [{chave}] {texto}")
+        print("  [0] Voltar ao menu principal")
+        escolha = input("\nOpcao: ").strip()
+        if escolha == "0":
+            return
+        if escolha in opcoes:
+            opcoes[escolha][1](conexao)
+        else:
+            print("Opcao invalida.")
+        pausar()
+
+
+def menu_candidatos(conexao):
+    submenu(conexao, "CANDIDATOS", {
+        "1": ("Cadastrar candidato", cadastrar_candidato),
+        "2": ("Alterar candidato", alterar_candidato),
+        "3": ("Excluir candidato", excluir_candidato),
+        "4": ("Listar candidatos", listar_candidatos),
+    })
+
+
+def menu_eleitores(conexao):
+    submenu(conexao, "ELEITORES", {
+        "1": ("Cadastrar eleitor", cadastrar_eleitor),
+        "2": ("Alterar eleitor", alterar_eleitor),
+        "3": ("Excluir eleitor", excluir_eleitor),
+        "4": ("Listar eleitores", listar_eleitores),
+    })
+
+
 def main():
     conexao = conectar()
     opcoes = {
-        "1": ("Cadastrar candidato", cadastrar_candidato),
-        "2": ("Cadastrar eleitor", cadastrar_eleitor),
+        "1": ("Candidatos (cadastrar, alterar, excluir)", menu_candidatos),
+        "2": ("Eleitores (cadastrar, alterar, excluir)", menu_eleitores),
         "3": ("Listar candidatos e eleitores", listar),
         "4": ("Iniciar votacao", votacao),
         "5": ("Apuracao dos votos", apuracao),
@@ -244,7 +377,10 @@ def main():
         if escolha == "0":
             break
         if escolha in opcoes:
-            opcoes[escolha][1](conexao)
+            funcao = opcoes[escolha][1]
+            funcao(conexao)
+            if funcao in (menu_candidatos, menu_eleitores):
+                continue  # o submenu ja fez as pausas dele
         else:
             print("Opcao invalida.")
         pausar()
