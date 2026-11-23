@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urna Eletrônica - ATPS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-minimo="{{ minimo }}">
+
+  <header class="topo">
+    <div class="topo-titulo">
+      <span class="brasao">✓</span>
+      <div>
+        <h1>Urna Eletrônica</h1>
+        <p>Eleição para Prefeito · ATPS Tópicos Avançados em ADS e SI</p>
+      </div>
+    </div>
+    <nav class="abas">
+      <button class="aba ativa" data-aba="votacao">Votação</button>
+      <button class="aba" data-aba="candidatos">Candidatos</button>
+      <button class="aba" data-aba="eleitores">Eleitores</button>
+      <button class="aba" data-aba="apuracao">Apuração</button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ===================== VOTAÇÃO ===================== -->
+    <section id="votacao" class="painel ativo">
+      <div class="votacao">
+
+        <aside class="cartao mesario">
+          <h2>Mesário</h2>
+          <form id="form-liberar">
+            <label for="titulo-voto">Título do eleitor</label>
+            <input id="titulo-voto" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1001">
+            <button type="submit" class="btn primario" id="btn-liberar">Liberar urna</button>
+            <button type="button" class="btn" id="btn-cancelar" disabled>Cancelar eleitor</button>
+          </form>
+          <p id="status-mesario" class="status"></p>
+
+          <hr>
+          <div class="progresso-info">
+            <strong id="contador-votos">Votos na urna: 0</strong>
+            <span id="contador-aptos"></span>
+          </div>
+          <div class="progresso"><div id="barra-progresso"></div></div>
+
+          <p class="dica">
+            Depois de liberar, dá para votar pelo teclado:<br>
+            <kbd>0</kbd>–<kbd>9</kbd> número · <kbd>B</kbd> branco ·
+            <kbd>Backspace</kbd> corrige · <kbd>Enter</kbd> confirma
+          </p>
+        </aside>
+
+        <div class="urna">
+          <div class="visor" id="visor"></div>
+
+          <div class="teclado">
+            <div class="teclado-marca">JUSTIÇA ELEITORAL</div>
+            <div class="numeros">
+              <button class="tecla" data-num="1">1</button>
+              <button class="tecla" data-num="2">2</button>
+              <button class="tecla" data-num="3">3</button>
+              <button class="tecla" data-num="4">4</button>
+              <button class="tecla" data-num="5">5</button>
+              <button class="tecla" data-num="6">6</button>
+              <button class="tecla" data-num="7">7</button>
+              <button class="tecla" data-num="8">8</button>
+              <button class="tecla" data-num="9">9</button>
+              <button class="tecla zero" data-num="0">0</button>
+            </div>
+            <div class="acoes">
+              <button class="acao branco" id="btn-branco">BRANCO</button>
+              <button class="acao corrige" id="btn-corrige">CORRIGE</button>
+              <button class="acao confirma" id="btn-confirma">CONFIRMA</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== CANDIDATOS ===================== -->
+    <section id="candidatos" class="painel">
+      <div class="crud">
+        <form class="cartao formulario" id="form-candidato">
+          <h2 id="titulo-form-candidato">Novo candidato</h2>
+          <label for="cand-numero">Número (2 dígitos)</label>
+          <input id="cand-numero" maxlength="2" inputmode="numeric" autocomplete="off">
+          <label for="cand-nome">Nome</label>
+          <input id="cand-nome" autocomplete="off">
+          <label for="cand-partido">Partido</label>
+          <input id="cand-partido" autocomplete="off">
+
+          <button type="submit" class="btn primario" id="btn-salvar-candidato">Cadastrar</button>
+          <button type="button" class="btn perigo" id="btn-excluir-candidato" hidden>Excluir</button>
+          <button type="button" class="btn" id="btn-limpar-candidato">Limpar</button>
+          <p class="dica">Clique em um candidato da lista para alterar ou excluir.</p>
+        </form>
+
+        <div class="cartao tabela-cartao">
+          <h2>Candidatos cadastrados</h2>
+          <table>
+            <thead><tr><th>Número</th><th>Nome</th><th>Partido</th></tr></thead>
+            <tbody id="lista-candidatos"></tbody>
+          </table>
+          <p class="vazio" id="vazio-candidatos">Nenhum candidato cadastrado.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ELEITORES ===================== -->
+    <section id="eleitores" class="painel">
+      <div class="crud">
+        <form class="cartao formulario" id="form-eleitor">
+          <h2 id="titulo-form-eleitor">Novo eleitor</h2>
+          <label for="ele-titulo">Título de eleitor</label>
+          <input id="ele-titulo" inputmode="numeric" autocomplete="off">
+          <label for="ele-nome">Nome</label>
+          <input id="ele-nome" autocomplete="off">
+
+          <button type="submit" class="btn primario" id="btn-salvar-eleitor">Cadastrar</button>
+          <button type="button" class="btn perigo" id="btn-excluir-eleitor" hidden>Excluir</button>
+          <button type="button" class="btn" id="btn-limpar-eleitor">Limpar</button>
+          <p class="dica">Clique em um eleitor da lista para alterar ou excluir.</p>
+        </form>
+
+        <div class="cartao tabela-cartao">
+          <h2>Eleitores cadastrados</h2>
+          <table>
+            <thead><tr><th>Título</th><th>Nome</th><th>Situação</th></tr></thead>
+            <tbody id="lista-eleitores"></tbody>
+          </table>
+          <p class="vazio" id="vazio-eleitores">Nenhum eleitor cadastrado.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== APURAÇÃO ===================== -->
+    <section id="apuracao" class="painel">
+      <div class="cartao">
+        <div class="barra-ferramentas">
+          <h2>Resultado da apuração</h2>
+          <div>
+            <button class="btn" id="btn-exemplo">Carregar dados de exemplo</button>
+            <button class="btn perigo" id="btn-zerar">Zerar urna</button>
+          </div>
+        </div>
+
+        <div class="resumo" id="resumo"></div>
+        <div class="grafico" id="grafico"></div>
+        <div class="situacao" id="situacao"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="aviso" class="aviso"></div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

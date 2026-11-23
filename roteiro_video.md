@@ -5,20 +5,19 @@
 
 **0:15–2:00 — Código (mostrar no PyCharm)**
 1. `banco.sql`: 3 tabelas — candidatos, eleitores (com o campo `ja_votou`) e votos. O voto não guarda o título do eleitor, para manter o voto secreto.
-2. `conectar()`: abre o SQLite e executa o banco.sql criando as tabelas.
-3. CRUD completo (menus 1 Candidatos e 2 Eleitores):
-   - Criação: `cadastrar_candidato` / `cadastrar_eleitor` usam INSERT com parâmetros `?`; número repetido cai no `IntegrityError`.
-   - Alteração: `alterar_candidato` / `alterar_eleitor` fazem UPDATE (ENTER mantém o valor atual).
-   - Exclusão: `excluir_candidato` / `excluir_eleitor` fazem DELETE com confirmação. Candidato que já recebeu voto não pode ser apagado (a chave estrangeira bloqueia) e eleitor que já votou também não (senão poderia ser recadastrado e votar de novo).
-4. `registrar_voto()`: confere se o eleitor existe e se já votou; mostra o candidato, aceita branco (B) e nulo (número inexistente), tem CONFIRMA/CORRIGE.
-5. Integridade: o `with conexao:` faz o UPDATE do eleitor e o INSERT do voto na mesma transação.
-6. `votacao()`: só deixa encerrar depois de 10 votos (`MINIMO_VOTOS`).
-7. `apuracao()`: conta os votos com SQL, mostra porcentagem e barra, e aplica a regra da maioria absoluta (eleito no 1º turno ou 2º turno), como no texto do TSE.
+2. `urna.py` → `conectar()`: abre o SQLite e executa o banco.sql criando as tabelas. `calcular_resultado()`: conta os votos com SQL e aplica a regra da maioria absoluta (eleito no 1º turno ou 2º turno), como no texto do TSE.
+3. `app.py` (Flask): cada operação do sistema é uma rota.
+   - Criação: `POST /api/candidatos` e `/api/eleitores` fazem INSERT com parâmetros `?`; número repetido cai no `IntegrityError`.
+   - Alteração: `PUT` faz UPDATE.
+   - Exclusão: `DELETE` faz DELETE. Candidato que já recebeu voto não pode ser apagado (a chave estrangeira bloqueia) e eleitor que já votou também não (senão poderia ser recadastrado e votar de novo).
+4. `votar()`: o `UPDATE ... WHERE ja_votou = 0` e o INSERT do voto ficam na mesma transação (`with conexao:`), então cada eleitor só vota uma vez.
+5. `MINIMO_VOTOS = 10`: a apuração só é liberada depois de 10 votos.
+6. `templates/index.html` + `static/app.js`: as telas, que só chamam as rotas do Python.
 
-**2:00–3:00 — Execução**
-- Opção 6 (dados de exemplo) → opção 3 (listar).
-- Opção 1 (Candidatos): cadastrar um candidato novo, alterar o nome dele e excluir.
-- Opção 2 (Eleitores): alterar o nome de um eleitor.
-- Opção 4: fazer 10 votos, incluindo 1 branco, 1 nulo, 1 correção e 1 tentativa de votar duas vezes com o mesmo título (mostrar o bloqueio).
-- Opção 5: mostrar o resultado.
-- (se der tempo) Opção 1 → Excluir o candidato 10: mostrar que é bloqueado porque já tem votos.
+**2:00–3:00 — Execução (`python app.py`)**
+- Apuração → Carregar dados de exemplo.
+- Candidatos: cadastrar um candidato novo, clicar nele, alterar o nome e excluir.
+- Eleitores: alterar o nome de um eleitor.
+- Votação: fazer 10 votos, incluindo 1 branco, 1 nulo, 1 correção e 1 tentativa de votar duas vezes com o mesmo título (mostrar o bloqueio).
+- Apuração: mostrar o gráfico e o resultado.
+- (se der tempo) Candidatos → excluir o 10: mostrar que é bloqueado porque já tem votos.
