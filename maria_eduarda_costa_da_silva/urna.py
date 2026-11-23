@@ -269,18 +269,15 @@ def votacao(conexao):
 
 
 # ---------------------------------------------------------------- apuracao
-def apuracao(conexao):
-    titulo("RESULTADO DA APURACAO")
+def calcular_resultado(conexao):
+    """Conta os votos e aplica a regra da maioria absoluta.
+    Usada tanto pela versao em texto quanto pela interface grafica (urna_gui.py)."""
     total = conexao.execute("SELECT COUNT(*) FROM votos").fetchone()[0]
-    if total == 0:
-        print("Nenhum voto registrado.")
-        return
-
     brancos = conexao.execute("SELECT COUNT(*) FROM votos WHERE tipo = 'BRANCO'").fetchone()[0]
     nulos = conexao.execute("SELECT COUNT(*) FROM votos WHERE tipo = 'NULO'").fetchone()[0]
     validos = total - brancos - nulos
 
-    resultado = conexao.execute("""
+    candidatos = conexao.execute("""
         SELECT c.numero, c.nome, c.partido, COUNT(v.id) AS qtd
           FROM candidatos c
           LEFT JOIN votos v ON v.numero_candidato = c.numero
@@ -288,27 +285,42 @@ def apuracao(conexao):
          ORDER BY qtd DESC, c.nome
     """).fetchall()
 
-    for numero, nome, partido, qtd in resultado:
-        perc = qtd / validos * 100 if validos else 0
+    # Regra da maioria absoluta (mais da metade dos votos validos)
+    if total == 0:
+        situacao = "Nenhum voto registrado."
+    elif validos == 0:
+        situacao = "Nao houve votos validos."
+    else:
+        primeiro = candidatos[0]
+        empate = len(candidatos) > 1 and candidatos[1][3] == primeiro[3]
+        if primeiro[3] > validos / 2:
+            situacao = f"ELEITO(A) EM 1o TURNO: {primeiro[1]} ({primeiro[2]})"
+        elif len(candidatos) > 1 and not empate:
+            situacao = (f"Ninguem passou de 50% dos validos -> 2o TURNO: "
+                        f"{primeiro[1]} x {candidatos[1][1]}")
+        else:
+            situacao = "Empate na primeira colocacao -> 2o TURNO necessario."
+
+    return {"total": total, "brancos": brancos, "nulos": nulos, "validos": validos,
+            "candidatos": candidatos, "situacao": situacao}
+
+
+def apuracao(conexao):
+    titulo("RESULTADO DA APURACAO")
+    r = calcular_resultado(conexao)
+    if r["total"] == 0:
+        print(r["situacao"])
+        return
+
+    for numero, nome, partido, qtd in r["candidatos"]:
+        perc = qtd / r["validos"] * 100 if r["validos"] else 0
         barra = "#" * int(perc / 4)
         print(f"{numero:02d} {nome:<15} {partido:<5} {qtd:>3} votos {perc:5.1f}% {barra}")
 
     print("-" * 50)
-    print(f"Votos validos: {validos} | Brancos: {brancos} | Nulos: {nulos} | Total: {total}")
-
-    # Regra da maioria absoluta (mais da metade dos votos validos)
-    if validos == 0:
-        print("Nao houve votos validos.")
-        return
-    primeiro = resultado[0]
-    empate = len(resultado) > 1 and resultado[1][3] == primeiro[3]
-    if primeiro[3] > validos / 2:
-        print(f"\nELEITO(A) EM 1o TURNO: {primeiro[1]} ({primeiro[2]})")
-    elif len(resultado) > 1 and not empate:
-        print(f"\nNinguem passou de 50% dos validos -> 2o TURNO: "
-              f"{primeiro[1]} x {resultado[1][1]}")
-    else:
-        print("\nEmpate na primeira colocacao -> 2o TURNO necessario.")
+    print(f"Votos validos: {r['validos']} | Brancos: {r['brancos']} | "
+          f"Nulos: {r['nulos']} | Total: {r['total']}")
+    print("\n" + r["situacao"])
 
 
 def zerar(conexao):
