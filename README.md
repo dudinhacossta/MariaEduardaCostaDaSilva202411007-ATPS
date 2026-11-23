@@ -52,5 +52,4 @@ maria_eduarda_costa_da_silva/
     app.js           # comportamento das telas
   requirements.txt
   LINK_DO_VIDEO_MARIA_EDUARDA_COSTA_DA_SILVA.txt
-roteiro_video.md     # roteiro do vídeo de apresentação
 ```
