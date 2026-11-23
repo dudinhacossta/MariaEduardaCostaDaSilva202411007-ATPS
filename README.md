@@ -2,8 +2,8 @@
 
 **Aluna:** Maria Eduarda Costa da Silva — **Matrícula:** 202411007
 
-Simulação de urna eletrônica em Python com banco SQLite: cadastro de candidatos e eleitores,
-votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio de voto duplo) e apuração com a regra
+Simulação de urna eletrônica em Python com banco SQLite: CRUD de candidatos e eleitores
+(cadastrar, alterar, excluir e listar), votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio de voto duplo) e apuração com a regra
 da maioria absoluta.
 
 ## Requisitos
@@ -23,9 +23,10 @@ O arquivo `urna.db` é criado automaticamente ao lado do `urna.py` a partir do `
 
 1. Opção **6** — carrega 3 candidatos (10, 25, 40) e 12 eleitores (títulos 1001 a 1012)
 2. Opção **3** — lista candidatos e eleitores
-3. Opção **4** — votação (mínimo de 10 votos; `B` = branco, número inexistente = nulo)
-4. Opção **5** — apuração
-5. Opção **7** — zera a urna para testar de novo
+3. Opções **1** (Candidatos) e **2** (Eleitores) — submenus para cadastrar, alterar, excluir e listar
+4. Opção **4** — votação (mínimo de 10 votos; `B` = branco, número inexistente = nulo)
+5. Opção **5** — apuração
+6. Opção **7** — zera a urna para testar de novo
 
 ## Estrutura
 
