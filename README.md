@@ -1,6 +1,6 @@
 # Urna Eletrônica — ATPS Tópicos Avançados em ADS e SI
 
-**Aluna:** Maria Eduarda Costa da Silva
+**Aluna:** Maria Eduarda Costa da Silva — **Matrícula:** 202411007
 
 Simulação de urna eletrônica em Python com banco SQLite: cadastro de candidatos e eleitores,
 votação (com branco, nulo, CONFIRMA/CORRIGE e bloqueio de voto duplo) e apuração com a regra
