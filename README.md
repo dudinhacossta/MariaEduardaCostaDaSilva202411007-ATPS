@@ -14,8 +14,11 @@ da maioria absoluta.
 
 ```bash
 cd maria_eduarda_costa_da_silva
-python urna.py
+python urna_gui.py   # interface gráfica (Tkinter)
+python urna.py       # versão em modo texto
 ```
+
+As duas versões usam o mesmo banco, então dá para cadastrar numa e votar na outra.
 
 O arquivo `urna.db` é criado automaticamente ao lado do `urna.py` a partir do `banco.sql`.
 
@@ -32,7 +35,8 @@ O arquivo `urna.db` é criado automaticamente ao lado do `urna.py` a partir do `
 
 ```
 maria_eduarda_costa_da_silva/
-  urna.py        # programa principal
+  urna_gui.py    # interface gráfica (urna, candidatos, eleitores, apuração)
+  urna.py        # versão em modo texto + funções de banco usadas pelas duas
   banco.sql      # script de criação das tabelas
   LINK_DO_VIDEO_MARIA_EDUARDA_COSTA_DA_SILVA.txt
 roteiro_video.md # roteiro do vídeo de apresentação
