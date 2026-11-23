@@ -7,7 +7,8 @@ Banco de dados: SQLite (arquivo urna.db, criado a partir de banco.sql).
 import os
 import sqlite3
 
-ARQUIVO_BANCO = "urna.db"
+PASTA = os.path.dirname(os.path.abspath(__file__))
+ARQUIVO_BANCO = os.path.join(PASTA, "urna.db")
 ARQUIVO_SCRIPT = "banco.sql"
 MINIMO_VOTOS = 10
 
@@ -17,8 +18,7 @@ def conectar():
     """Abre o banco e cria as tabelas (se ainda nao existirem)."""
     conexao = sqlite3.connect(ARQUIVO_BANCO)
     conexao.execute("PRAGMA foreign_keys = ON")
-    pasta = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(pasta, ARQUIVO_SCRIPT), encoding="utf-8") as f:
+    with open(os.path.join(PASTA, ARQUIVO_SCRIPT), encoding="utf-8") as f:
         conexao.executescript(f.read())
     return conexao
 
