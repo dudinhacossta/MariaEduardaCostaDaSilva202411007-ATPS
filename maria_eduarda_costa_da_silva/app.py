@@ -1,9 +1,5 @@
 """
-Urna Eletronica - versao web
-ATPS Topicos Avancados em ADS e SI
 
-O Python (Flask) cuida do banco de dados e de todas as regras da eleicao.
-O navegador so mostra as telas e chama as rotas /api abaixo.
 
 Execute:  python app.py     e abra http://127.0.0.1:5000
 """
