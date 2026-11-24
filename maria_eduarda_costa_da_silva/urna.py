@@ -1,22 +1,81 @@
 
 
 import os
-import sqlite3
+
+import pymysql
+from pymysql.err import IntegrityError
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
-ARQUIVO_BANCO = os.path.join(PASTA, "urna.db")
 ARQUIVO_SCRIPT = "banco.sql"
 MINIMO_VOTOS = 10
 
+MYSQL = {
+    "host": os.environ.get("URNA_DB_HOST", "localhost"),
+    "port": int(os.environ.get("URNA_DB_PORTA", "3306")),
+    "user": os.environ.get("URNA_DB_USUARIO", "root"),
+    "password": os.environ.get("URNA_DB_SENHA", ""),
+}
+NOME_BANCO = "urna_eletronica"
+
 
 # ---------------------------------------------------------------- banco
-def conectar():
-    """Abre o banco e cria as tabelas (se ainda nao existirem)."""
-    conexao = sqlite3.connect(ARQUIVO_BANCO)
-    conexao.execute("PRAGMA foreign_keys = ON")
+class Banco:
+    """Conexao com o MySQL.
+    execute() devolve o cursor e 'with banco:' abre uma transacao
+    (commit se der certo, rollback se der erro)."""
+
+    def __init__(self, conexao):
+        self.conexao = conexao
+
+    def execute(self, sql, parametros=()):
+        cursor = self.conexao.cursor()
+        cursor.execute(sql, parametros)
+        return cursor
+
+    def executemany(self, sql, lista):
+        cursor = self.conexao.cursor()
+        cursor.executemany(sql, lista)
+        return cursor
+
+    def commit(self):
+        self.conexao.commit()
+
+    def close(self):
+        self.conexao.close()
+
+    def __enter__(self):
+        self.conexao.begin()
+        return self
+
+    def __exit__(self, tipo_erro, erro, rastro):
+        if tipo_erro is None:
+            self.conexao.commit()
+        else:
+            self.conexao.rollback()
+        return False
+
+
+_tabelas_criadas = False
+
+
+def criar_banco(banco):
+    """Executa o banco.sql: cria o banco urna_eletronica e as tabelas, se nao existirem."""
     with open(os.path.join(PASTA, ARQUIVO_SCRIPT), encoding="utf-8") as f:
-        conexao.executescript(f.read())
-    return conexao
+        linhas = [linha for linha in f if not linha.strip().startswith("--")]
+    for comando in "".join(linhas).split(";"):
+        if comando.strip():
+            banco.execute(comando)
+
+
+def conectar():
+    global _tabelas_criadas
+    conexao = pymysql.connect(**MYSQL, charset="utf8mb4", autocommit=True)
+    banco = Banco(conexao)
+    if not _tabelas_criadas:
+        criar_banco(banco)
+        _tabelas_criadas = True
+    conexao.select_db(NOME_BANCO)
+    return banco
 
 
 # ---------------------------------------------------------------- tela
@@ -47,11 +106,11 @@ def cadastrar_candidato(conexao):
         print("Nome e partido sao obrigatorios.")
         return
     try:
-        conexao.execute("INSERT INTO candidatos (numero, nome, partido) VALUES (?, ?, ?)",
+        conexao.execute("INSERT INTO candidatos (numero, nome, partido) VALUES (%s, %s, %s)",
                         (int(numero), nome, partido))
         conexao.commit()
         print(f"Candidato {nome} ({numero}) cadastrado!")
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         print("Ja existe um candidato com esse numero.")
 
 
@@ -66,11 +125,11 @@ def cadastrar_eleitor(conexao):
         print("Nome obrigatorio.")
         return
     try:
-        conexao.execute("INSERT INTO eleitores (titulo, nome) VALUES (?, ?)",
+        conexao.execute("INSERT INTO eleitores (titulo, nome) VALUES (%s, %s)",
                         (titulo_eleitor, nome))
         conexao.commit()
         print(f"Eleitor {nome} cadastrado!")
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         print("Esse titulo ja esta cadastrado.")
 
 
@@ -81,7 +140,7 @@ def buscar_candidato(conexao):
     if not numero.isdigit():
         print("Numero invalido.")
         return None
-    candidato = conexao.execute("SELECT numero, nome, partido FROM candidatos WHERE numero = ?",
+    candidato = conexao.execute("SELECT numero, nome, partido FROM candidatos WHERE numero = %s",
                                 (int(numero),)).fetchone()
     if candidato is None:
         print("Candidato nao encontrado.")
@@ -98,7 +157,7 @@ def alterar_candidato(conexao):
     nome = input(f"Nome [{nome_atual}]: ").strip() or nome_atual
     partido = input(f"Partido [{partido_atual}]: ").strip().upper() or partido_atual
     with conexao:
-        conexao.execute("UPDATE candidatos SET nome = ?, partido = ? WHERE numero = ?",
+        conexao.execute("UPDATE candidatos SET nome = %s, partido = %s WHERE numero = %s",
                         (nome, partido, numero))
     print(f"Candidato {numero:02d} atualizado: {nome} ({partido}).")
 
@@ -114,9 +173,9 @@ def excluir_candidato(conexao):
         return
     try:
         with conexao:
-            conexao.execute("DELETE FROM candidatos WHERE numero = ?", (numero,))
+            conexao.execute("DELETE FROM candidatos WHERE numero = %s", (numero,))
         print(f"Candidato {nome} excluido.")
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         # A chave estrangeira em votos impede apagar quem ja recebeu votos.
         print("Esse candidato ja recebeu votos e nao pode ser excluido.")
         print("Para exclui-lo, zere a urna primeiro (opcao 7 do menu principal).")
@@ -125,7 +184,7 @@ def excluir_candidato(conexao):
 def buscar_eleitor(conexao):
     """Pede o titulo e devolve (titulo, nome, ja_votou) ou None."""
     titulo_eleitor = input("Numero do titulo de eleitor: ").strip()
-    eleitor = conexao.execute("SELECT titulo, nome, ja_votou FROM eleitores WHERE titulo = ?",
+    eleitor = conexao.execute("SELECT titulo, nome, ja_votou FROM eleitores WHERE titulo = %s",
                               (titulo_eleitor,)).fetchone()
     if eleitor is None:
         print("Eleitor nao encontrado.")
@@ -141,7 +200,7 @@ def alterar_eleitor(conexao):
     print("(deixe em branco e tecle ENTER para manter o valor atual)")
     nome = input(f"Nome [{nome_atual}]: ").strip() or nome_atual
     with conexao:
-        conexao.execute("UPDATE eleitores SET nome = ? WHERE titulo = ?", (nome, titulo_eleitor))
+        conexao.execute("UPDATE eleitores SET nome = %s WHERE titulo = %s", (nome, titulo_eleitor))
     print(f"Eleitor {titulo_eleitor} atualizado: {nome}.")
 
 
@@ -159,7 +218,7 @@ def excluir_eleitor(conexao):
         print("Exclusao cancelada.")
         return
     with conexao:
-        conexao.execute("DELETE FROM eleitores WHERE titulo = ?", (titulo_eleitor,))
+        conexao.execute("DELETE FROM eleitores WHERE titulo = %s", (titulo_eleitor,))
     print(f"Eleitor {nome} excluido.")
 
 
@@ -189,8 +248,8 @@ def carregar_exemplo(conexao):
     candidatos = [(10, "Ana Souza", "PTA"), (25, "Bruno Lima", "PTB"),
                   (40, "Carla Mendes", "PTC")]
     eleitores = [(str(1000 + i), f"Eleitor {i}") for i in range(1, 13)]
-    conexao.executemany("INSERT OR IGNORE INTO candidatos VALUES (?, ?, ?)", candidatos)
-    conexao.executemany("INSERT OR IGNORE INTO eleitores (titulo, nome) VALUES (?, ?)", eleitores)
+    conexao.executemany("INSERT IGNORE INTO candidatos VALUES (%s, %s, %s)", candidatos)
+    conexao.executemany("INSERT IGNORE INTO eleitores (titulo, nome) VALUES (%s, %s)", eleitores)
     conexao.commit()
     print("Dados de exemplo carregados (titulos 1001 a 1012).")
 
@@ -199,7 +258,7 @@ def carregar_exemplo(conexao):
 def registrar_voto(conexao):
     """Faz um voto completo. Retorna True se o voto foi registrado."""
     titulo_eleitor = input("\nTitulo do eleitor: ").strip()
-    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = ?",
+    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = %s",
                               (titulo_eleitor,)).fetchone()
     if eleitor is None:
         print("Eleitor nao encontrado.")
@@ -219,7 +278,7 @@ def registrar_voto(conexao):
             candidato = None
             if digitado.isdigit():
                 candidato = conexao.execute(
-                    "SELECT numero, nome, partido FROM candidatos WHERE numero = ?",
+                    "SELECT numero, nome, partido FROM candidatos WHERE numero = %s",
                     (int(digitado),)).fetchone()
             if candidato:
                 tipo, numero = "VALIDO", candidato[0]
@@ -235,8 +294,8 @@ def registrar_voto(conexao):
     # Marca o eleitor e grava o voto na mesma transacao:
     # ou as duas coisas acontecem, ou nenhuma acontece.
     with conexao:
-        conexao.execute("UPDATE eleitores SET ja_votou = 1 WHERE titulo = ?", (titulo_eleitor,))
-        conexao.execute("INSERT INTO votos (numero_candidato, tipo) VALUES (?, ?)", (numero, tipo))
+        conexao.execute("UPDATE eleitores SET ja_votou = 1 WHERE titulo = %s", (titulo_eleitor,))
+        conexao.execute("INSERT INTO votos (numero_candidato, tipo) VALUES (%s, %s)", (numero, tipo))
     print("\a*** FIM ***")
     return True
 
@@ -277,7 +336,7 @@ def calcular_resultado(conexao):
         SELECT c.numero, c.nome, c.partido, COUNT(v.id) AS qtd
           FROM candidatos c
           LEFT JOIN votos v ON v.numero_candidato = c.numero
-         GROUP BY c.numero
+         GROUP BY c.numero, c.nome, c.partido
          ORDER BY qtd DESC, c.nome
     """).fetchall()
 
