@@ -4,13 +4,12 @@
 Execute:  python app.py     e abra http://127.0.0.1:5000
 """
 
-import sqlite3
 import threading
 import webbrowser
 
 from flask import Flask, g, jsonify, render_template, request
 
-from urna import conectar, calcular_resultado, carregar_exemplo, MINIMO_VOTOS
+from urna import conectar, calcular_resultado, carregar_exemplo, IntegrityError, MINIMO_VOTOS
 
 app = Flask(__name__)
 app.json.ensure_ascii = False
@@ -73,9 +72,9 @@ def cadastrar_candidato():
     conexao = db()
     try:
         with conexao:
-            conexao.execute("INSERT INTO candidatos (numero, nome, partido) VALUES (?, ?, ?)",
+            conexao.execute("INSERT INTO candidatos (numero, nome, partido) VALUES (%s, %s, %s)",
                             (int(numero), nome, partido))
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         return erro("Já existe um candidato com esse número.", 409)
     return ok(f"Candidato {nome} cadastrado!", 201)
 
@@ -89,7 +88,7 @@ def alterar_candidato(numero):
         return erro("Nome e partido são obrigatórios.")
     conexao = db()
     with conexao:
-        cursor = conexao.execute("UPDATE candidatos SET nome = ?, partido = ? WHERE numero = ?",
+        cursor = conexao.execute("UPDATE candidatos SET nome = %s, partido = %s WHERE numero = %s",
                                  (nome, partido, numero))
     if cursor.rowcount == 0:
         return erro("Candidato não encontrado.", 404)
@@ -101,8 +100,8 @@ def excluir_candidato(numero):
     conexao = db()
     try:
         with conexao:
-            cursor = conexao.execute("DELETE FROM candidatos WHERE numero = ?", (numero,))
-    except sqlite3.IntegrityError:
+            cursor = conexao.execute("DELETE FROM candidatos WHERE numero = %s", (numero,))
+    except IntegrityError:
         # A chave estrangeira em votos impede apagar quem ja recebeu votos.
         return erro("Esse candidato já recebeu votos e não pode ser excluído. "
                     "Zere a urna primeiro (aba Apuração).", 409)
@@ -130,8 +129,8 @@ def cadastrar_eleitor():
     conexao = db()
     try:
         with conexao:
-            conexao.execute("INSERT INTO eleitores (titulo, nome) VALUES (?, ?)", (titulo, nome))
-    except sqlite3.IntegrityError:
+            conexao.execute("INSERT INTO eleitores (titulo, nome) VALUES (%s, %s)", (titulo, nome))
+    except IntegrityError:
         return erro("Esse título já está cadastrado.", 409)
     return ok(f"Eleitor(a) {nome} cadastrado(a)!", 201)
 
@@ -143,7 +142,7 @@ def alterar_eleitor(titulo):
         return erro("O nome é obrigatório.")
     conexao = db()
     with conexao:
-        cursor = conexao.execute("UPDATE eleitores SET nome = ? WHERE titulo = ?", (nome, titulo))
+        cursor = conexao.execute("UPDATE eleitores SET nome = %s WHERE titulo = %s", (nome, titulo))
     if cursor.rowcount == 0:
         return erro("Eleitor não encontrado.", 404)
     return ok(f"Eleitor {titulo} atualizado.")
@@ -152,7 +151,7 @@ def alterar_eleitor(titulo):
 @app.delete("/api/eleitores/<titulo>")
 def excluir_eleitor(titulo):
     conexao = db()
-    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = ?",
+    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = %s",
                               (titulo,)).fetchone()
     if eleitor is None:
         return erro("Eleitor não encontrado.", 404)
@@ -162,7 +161,7 @@ def excluir_eleitor(titulo):
         return erro(f"{nome} já votou e não pode ser excluído(a). "
                     "Isso garante a integridade da eleição.", 409)
     with conexao:
-        conexao.execute("DELETE FROM eleitores WHERE titulo = ?", (titulo,))
+        conexao.execute("DELETE FROM eleitores WHERE titulo = %s", (titulo,))
     return ok(f"{nome} excluído(a).")
 
 
@@ -172,7 +171,7 @@ def liberar_eleitor():
     """O mesario informa o titulo; a urna so libera quem existe e ainda nao votou."""
     titulo = campo(corpo(), "titulo")
     conexao = db()
-    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = ?",
+    eleitor = conexao.execute("SELECT nome, ja_votou FROM eleitores WHERE titulo = %s",
                               (titulo,)).fetchone()
     if eleitor is None:
         return erro("Eleitor não encontrado.", 404)
@@ -194,7 +193,7 @@ def votar():
     if voto == "BRANCO":
         tipo, numero = "BRANCO", None
     elif voto.isdigit() and len(voto) == 2:
-        existe = conexao.execute("SELECT 1 FROM candidatos WHERE numero = ?",
+        existe = conexao.execute("SELECT 1 FROM candidatos WHERE numero = %s",
                                  (int(voto),)).fetchone()
         tipo, numero = ("VALIDO", int(voto)) if existe else ("NULO", None)
     else:
@@ -205,10 +204,10 @@ def votar():
     # mesmo que a pagina envie o voto repetido.
     with conexao:
         cursor = conexao.execute(
-            "UPDATE eleitores SET ja_votou = 1 WHERE titulo = ? AND ja_votou = 0", (titulo,))
+            "UPDATE eleitores SET ja_votou = 1 WHERE titulo = %s AND ja_votou = 0", (titulo,))
         if cursor.rowcount == 0:
             return erro("Eleitor não encontrado ou já votou.", 409)
-        conexao.execute("INSERT INTO votos (numero_candidato, tipo) VALUES (?, ?)",
+        conexao.execute("INSERT INTO votos (numero_candidato, tipo) VALUES (%s, %s)",
                         (numero, tipo))
     return ok("Voto registrado.", tipo=tipo)
 
