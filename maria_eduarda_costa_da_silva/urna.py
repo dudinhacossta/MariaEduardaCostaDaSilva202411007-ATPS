@@ -1,8 +1,4 @@
-"""
-Urna Eletronica - ATPS Topicos Avancados em ADS e SI
-Simula registro de candidatos, cadastro de eleitores, votacao e apuracao.
-Banco de dados: SQLite (arquivo urna.db, criado a partir de banco.sql).
-"""
+
 
 import os
 import sqlite3
